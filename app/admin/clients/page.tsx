@@ -5,6 +5,8 @@ import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
 import { AdminDashboardClient } from "../client-view";
 
+export const dynamic = 'force-dynamic';
+
 async function getOrders() {
   await dbConnect();
   const orders = await Order.find({}).sort({ createdAt: -1 });

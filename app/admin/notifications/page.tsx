@@ -4,6 +4,8 @@ import Order from "@/models/Order";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
+export const dynamic = 'force-dynamic';
+
 async function getNotifications() {
   await dbConnect();
   const orders = await Order.find({}).lean();

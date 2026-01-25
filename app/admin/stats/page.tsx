@@ -4,6 +4,8 @@ import Order from "@/models/Order";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+export const dynamic = 'force-dynamic';
+
 async function getStatsData() {
   await dbConnect();
   const orders = await Order.find({}).sort({ createdAt: 1 }); // Oldest first for timeline

@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, ShoppingBag, Activity } from "lucide-react";
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
-import { format } from "date-fns";
+
+export const dynamic = 'force-dynamic';
 
 async function getOverviewData() {
   await dbConnect();
@@ -37,12 +38,12 @@ export default async function OverviewPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <h2 className="text-3xl font-bold tracking-tight text-white mb-6">Vue d'ensemble</h2>
+      <h2 className="text-3xl font-bold tracking-tight text-white mb-6">Vue d&apos;ensemble</h2>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-zinc-900 border-white/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">Chiffre d'Affaires Signé</CardTitle>
+            <CardTitle className="text-sm font-medium text-white">Chiffre d&apos;Affaires Signé</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
