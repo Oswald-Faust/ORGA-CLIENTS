@@ -3,14 +3,49 @@ import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
+import User from "@/models/User";
 import { AdminDashboardClient } from "../client-view";
 
 export const dynamic = 'force-dynamic';
 
-async function getOrders() {
+async function getClientsWithOrders() {
   await dbConnect();
-  const orders = await Order.find({}).sort({ createdAt: -1 });
-  return JSON.parse(JSON.stringify(orders));
+  
+  // Récupérer tous les utilisateurs (sauf les admins)
+  const users = await User.find({ role: 'client' }).sort({ createdAt: -1 });
+  
+  // Récupérer toutes les commandes
+  const orders = await Order.find({});
+  
+  // Créer un map des commandes par email
+  const ordersByEmail = new Map();
+  orders.forEach(order => {
+    ordersByEmail.set(order.clientEmail, order);
+  });
+  
+  // Fusionner les utilisateurs avec leurs commandes
+  const clientsWithOrders = users.map(user => {
+    const order = ordersByEmail.get(user.email);
+    return {
+      _id: order?._id?.toString() || user._id.toString(),
+      oderId: order?._id?.toString() || null,
+      userId: user._id.toString(),
+      clientEmail: user.email,
+      firstName: order?.firstName || user.name?.split(' ')[0] || '',
+      lastName: order?.lastName || user.name?.split(' ').slice(1).join(' ') || '',
+      totalPrice: order?.totalPrice || 0,
+      seller: order?.seller || '',
+      references: order?.references || [],
+      deposit30: order?.deposit30 || { isPaid: false },
+      payment15_1: order?.payment15_1 || { isPaid: false },
+      payment15_2: order?.payment15_2 || { isPaid: false },
+      hasOrder: !!order,
+      createdAt: user.createdAt,
+      phone: user.phone || ''
+    };
+  });
+  
+  return JSON.parse(JSON.stringify(clientsWithOrders));
 }
 
 export default async function ClientsPage() {
@@ -20,7 +55,8 @@ export default async function ClientsPage() {
     redirect("/login");
   }
 
-  const orders = await getOrders();
+  const clients = await getClientsWithOrders();
 
-  return <AdminDashboardClient initialOrders={orders} />;
+  return <AdminDashboardClient initialOrders={clients} />;
 }
+

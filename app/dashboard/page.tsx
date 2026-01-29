@@ -3,9 +3,26 @@ import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
-import { OnboardingForm } from "./onboarding-form";
 import { UserNav } from "@/components/user-nav";
 import { ClientSidebar } from "./client-sidebar";
+import { ReferenceManager } from "./reference-manager";
+import { PaymentProgressClient } from "./payment-progress";
+
+interface Reference {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  price: number;
+  info?: string;
+  createdAt: string;
+}
+
+interface PaymentStatus {
+  isPaid?: boolean;
+  paidAt?: Date;
+  dueDate?: Date;
+  proofUrl?: string;
+}
 
 async function getClientData(email: string) {
   await dbConnect();
@@ -27,25 +44,32 @@ export default async function DashboardPage() {
 
   const order = await getClientData(session.user.email!);
 
-  if (!order) {
-    return (
-      <div className="min-h-screen bg-black text-white p-6 relative flex">
-         <ClientSidebar />
-         <div className="flex-1 flex flex-col">
-             <div className="absolute top-6 right-6">
-                 <UserNav email={session.user.email!} name={session.user.name || ""} />
-             </div>
-             <OnboardingForm userEmail={session.user.email!} userName={session.user.name || ""} />
-         </div>
-      </div>
-    );
-  }
+  // Préparer les données pour le ReferenceManager
+  const references: Reference[] = order?.references?.map((ref: { _id: { toString: () => string }; firstName: string; lastName: string; price: number; info?: string; createdAt?: Date }) => ({
+    _id: ref._id.toString(),
+    firstName: ref.firstName,
+    lastName: ref.lastName,
+    price: ref.price,
+    info: ref.info,
+    createdAt: ref.createdAt?.toISOString() || new Date().toISOString()
+  })) || [];
 
-  const steps = [
-    { name: "Acompte", value: "30%", status: order.deposit30 },
-    { name: "Paiement Intermédiaire", value: "15%", status: order.payment15_1 },
-    { name: "Solde", value: "15%", status: order.payment15_2 },
-  ];
+  const totalPrice = order?.totalPrice || 0;
+  const userName = order?.firstName || session.user.name?.split(' ')[0] || 'Client';
+
+  // Préparer les steps pour le composant PaymentProgress
+  const formatPaymentStatus = (status: PaymentStatus | undefined) => ({
+    isPaid: status?.isPaid || false,
+    paidAt: status?.paidAt?.toISOString(),
+    dueDate: status?.dueDate?.toISOString(),
+    proofUrl: status?.proofUrl
+  });
+
+  const steps = order ? [
+    { name: "Acompte", value: "30%", status: formatPaymentStatus(order.deposit30) },
+    { name: "Paiement Intermédiaire", value: "15%", status: formatPaymentStatus(order.payment15_1) },
+    { name: "Solde", value: "15%", status: formatPaymentStatus(order.payment15_2) },
+  ] : [];
 
   return (
     <div className="min-h-screen bg-black text-foreground flex">
@@ -59,48 +83,23 @@ export default async function DashboardPage() {
             <header className="flex justify-between items-start border-b border-zinc-800 pb-6 w-full">
             <div>
                 <h1 className="text-3xl font-bold tracking-tighter text-white">Votre Espace</h1>
-                <p className="text-zinc-500 mt-2">Bienvenue, {order.firstName || session.user.name}</p>
+                <p className="text-zinc-500 mt-2">Bienvenue, {userName}</p>
             </div>
             <div className="flex flex-col items-end gap-4">
                 <UserNav email={session.user.email!} name={session.user.name || ""} />
-                <div className="text-right mt-4">
-                    <div className="text-sm text-zinc-500 uppercase tracking-widest">Montant Total</div>
-                    <div className="text-2xl font-light text-white">{order.totalPrice?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</div>
-                </div>
             </div>
             </header>
 
-            {/* Progress Section */}
-            <section>
-            <h2 className="text-xl font-medium mb-8 text-zinc-300">Progression des paiements</h2>
-            <div className="relative">
-                {/* Progress Bar Background */}
-                <div className="absolute left-6 top-0 bottom-0 w-px bg-zinc-800 md:hidden"></div>
-                
-                <div className="grid md:grid-cols-3 gap-8">
-                    {steps.map((step, index) => {
-                    const isPaid = step.status?.isPaid;
-                    return (
-                        <div key={index} className={`relative p-6 rounded-xl border transition-all duration-300 ${isPaid ? 'bg-zinc-900/50 border-emerald-900/30' : 'bg-black border-zinc-900'}`}>
-                            <div className="flex items-start justify-between mb-4">
-                                <span className="text-4xl font-light text-zinc-700">{step.value}</span>
-                                <div className={`mt-2 px-3 py-1 text-xs rounded-full border ${isPaid ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10' : 'border-zinc-800 text-zinc-500'}`}>
-                                    {isPaid ? 'RÉGLÉ' : 'EN ATTENTE'}
-                                </div>
-                            </div>
-                            <h3 className="text-lg font-medium text-white mb-2">{step.name}</h3>
-                            {isPaid && step.status.paidAt && (
-                                <p className="text-sm text-zinc-500">Payé le {new Date(step.status.paidAt).toLocaleDateString('fr-FR')}</p>
-                            )}
-                            {!isPaid && step.status.dueDate && (
-                                <p className="text-sm text-zinc-500">Échéance : {new Date(step.status.dueDate).toLocaleDateString('fr-FR')}</p>
-                            )}
-                        </div>
-                    )
-                    })}
-                </div>
-            </div>
-            </section>
+            {/* Gestionnaire de références */}
+            <ReferenceManager 
+              initialReferences={references}
+              initialTotalPrice={totalPrice}
+            />
+
+            {/* Progress Section - visible seulement si une commande existe avec des paiements */}
+            {order && steps.length > 0 && (
+              <PaymentProgressClient steps={steps} />
+            )}
 
 
           </div>
