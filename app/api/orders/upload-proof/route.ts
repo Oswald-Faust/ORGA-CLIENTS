@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     const file = formData.get('file') as File;
     const orderId = formData.get('orderId') as string;
     const paymentField = formData.get('paymentField') as string;
+    const referenceId = formData.get('referenceId') as string;
 
     if (!file || !orderId || !paymentField) {
       return NextResponse.json({ message: "Fichier, orderId et paymentField requis" }, { status: 400 });
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
     // Generate unique filename
     const timestamp = Date.now();
     const extension = file.name.split('.').pop() || 'png';
-    const filename = `${orderId}_${paymentField}_${timestamp}.${extension}`;
+    const filename = `${orderId}_${referenceId || 'main'}_${paymentField}_${timestamp}.${extension}`;
     const filepath = join(uploadDir, filename);
 
     // Write file
@@ -60,11 +61,27 @@ export async function POST(req: Request) {
     
     // Dynamic update based on payment field
     const updateQuery: Record<string, unknown> = {};
-    updateQuery[`${paymentField}.proofUrl`] = proofUrl;
-    updateQuery[`${paymentField}.isPaid`] = true;
-    updateQuery[`${paymentField}.paidAt`] = new Date();
 
-    await Order.findByIdAndUpdate(orderId, { $set: updateQuery });
+    if (referenceId) {
+        // Update specific reference
+        // Note: This requires the order model to have references array with _id matching referenceId
+        await Order.findOneAndUpdate(
+            { _id: orderId, "references._id": referenceId },
+            { 
+                $set: {
+                    [`references.$.${paymentField}.proofUrl`]: proofUrl,
+                    [`references.$.${paymentField}.isPaid`]: true,
+                    [`references.$.${paymentField}.paidAt`]: new Date()
+                }
+            }
+        );
+    } else {
+        // Legacy/Top-level update
+        updateQuery[`${paymentField}.proofUrl`] = proofUrl;
+        updateQuery[`${paymentField}.isPaid`] = true;
+        updateQuery[`${paymentField}.paidAt`] = new Date();
+        await Order.findByIdAndUpdate(orderId, { $set: updateQuery });
+    }
 
     return NextResponse.json({ 
       message: "Preuve de paiement téléchargée", 

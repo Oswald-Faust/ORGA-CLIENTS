@@ -5,8 +5,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, User, Euro, FileText, X } from "lucide-react";
+import { Plus, Trash2, User, Euro, FileText, X, Check, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+
+interface PaymentStatus {
+  isPaid?: boolean;
+  paidAt?: string;
+  dueDate?: string;
+  proofUrl?: string;
+}
 
 interface Reference {
   _id: string;
@@ -15,6 +23,9 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
+  deposit30?: PaymentStatus;
+  payment15_1?: PaymentStatus;
+  payment15_2?: PaymentStatus;
 }
 
 interface ReferenceManagerProps {
@@ -308,30 +319,49 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-5 flex items-start justify-between group hover:border-zinc-700/50 transition-all"
+                  className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-5 group hover:border-zinc-700/50 transition-all"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-medium">
-                      {ref.firstName[0]}{ref.lastName[0]}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-medium">
+                        {ref.firstName[0]}{ref.lastName[0]}
+                        </div>
+                        <div>
+                        <h4 className="text-white font-medium">{ref.firstName} {ref.lastName}</h4>
+                        <p className="text-emerald-400 text-lg mt-1">
+                            {ref.price.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                        {ref.info && (
+                            <p className="text-zinc-500 text-sm mt-2 max-w-md">{ref.info}</p>
+                        )}
+                        </div>
                     </div>
-                    <div>
-                      <h4 className="text-white font-medium">{ref.firstName} {ref.lastName}</h4>
-                      <p className="text-emerald-400 text-lg mt-1">
-                        {ref.price.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-                      </p>
-                      {ref.info && (
-                        <p className="text-zinc-500 text-sm mt-2 max-w-md">{ref.info}</p>
-                      )}
-                    </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteReference(ref._id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-400 hover:bg-red-400/10"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteReference(ref._id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-400 hover:bg-red-400/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  {/* Payment Progress Bar */}
+                  <div className="mt-6 pt-4 border-t border-white/5">
+                      <div className="flex items-center justify-between text-xs text-zinc-500 mb-3">
+                          <span className="uppercase tracking-wider">État des paiements</span>
+                          {(ref.deposit30?.isPaid && ref.payment15_1?.isPaid && ref.payment15_2?.isPaid) && (
+                              <span className="text-emerald-500 flex items-center gap-1 font-medium">
+                                  <Check className="w-3 h-3" /> Terminé
+                              </span>
+                          )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                          <PaymentStepBadge step="30%" label="Acompte" status={ref.deposit30} />
+                          <PaymentStepBadge step="15%" label="Tranche 1" status={ref.payment15_1} />
+                          <PaymentStepBadge step="15%" label="Solde" status={ref.payment15_2} />
+                      </div>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -340,4 +370,34 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
       </div>
     </div>
   );
+}
+
+function PaymentStepBadge({ step, label, status }: { step: string, label: string, status?: PaymentStatus }) {
+    const isPaid = status?.isPaid;
+    
+    return (
+        <div className={`
+            relative p-3 rounded-lg border flex items-center gap-3 transition-colors
+            ${isPaid 
+                ? 'bg-emerald-500/10 border-emerald-500/20' 
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500'}
+        `}>
+            <div className={`
+                w-5 h-5 rounded-full flex items-center justify-center shrink-0 border
+                ${isPaid ? 'bg-emerald-500 border-emerald-500 text-black' : 'border-zinc-700 bg-zinc-800'}
+            `}>
+                {isPaid ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+            </div>
+            <div className="min-w-0">
+                <div className={`text-xs font-medium ${isPaid ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                    {step} - {label}
+                </div>
+                {isPaid && status?.paidAt && (
+                   <div className="text-[10px] text-emerald-500/60 truncate">
+                        Le {format(new Date(status.paidAt), 'dd/MM')}
+                   </div>
+                )}
+            </div>
+        </div>
+    )
 }

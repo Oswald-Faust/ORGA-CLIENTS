@@ -1,12 +1,31 @@
 import mongoose from 'mongoose';
 
-// Schéma pour les personnes de référence
 const ReferenceSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   price: { type: Number, required: true },
   info: { type: String }, // Informations utiles
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+
+  // Payment Steps for each reference
+  deposit30: {
+    isPaid: { type: Boolean, default: false },
+    paidAt: Date,
+    dueDate: Date,
+    proofUrl: { type: String }
+  },
+  payment15_1: {
+    isPaid: { type: Boolean, default: false },
+    paidAt: Date,
+    dueDate: Date,
+    proofUrl: { type: String }
+  },
+  payment15_2: {
+    isPaid: { type: Boolean, default: false },
+    paidAt: Date,
+    dueDate: Date,
+    proofUrl: { type: String }
+  }
 });
 
 const OrderSchema = new mongoose.Schema({
@@ -20,31 +39,6 @@ const OrderSchema = new mongoose.Schema({
   
   // Liste des personnes de référence
   references: [ReferenceSchema],
-
-  // Payment Steps
-  // 30% Deposit
-  deposit30: {
-    isPaid: { type: Boolean, default: false },
-    paidAt: Date,
-    dueDate: Date,
-    proofUrl: { type: String } // URL de la preuve de paiement
-  },
-
-  // 15% Installment 1
-  payment15_1: {
-    isPaid: { type: Boolean, default: false },
-    paidAt: Date,
-    dueDate: Date,
-    proofUrl: { type: String } // URL de la preuve de paiement
-  },
-
-  // 15% Installment 2
-  payment15_2: {
-    isPaid: { type: Boolean, default: false },
-    paidAt: Date,
-    dueDate: Date,
-    proofUrl: { type: String } // URL de la preuve de paiement
-  },
   
   // Is the order fully completed?
   isCompleted: { type: Boolean, default: false }

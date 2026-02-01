@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Pencil, Check, X, Users, Trash2, User, Euro, FileText, Upload, Image as ImageIcon } from "lucide-react";
 
+interface PaymentStatus {
+  isPaid: boolean;
+  paidAt?: string;
+  dueDate?: string;
+  proofUrl?: string;
+}
+
 interface Reference {
   _id: string;
   firstName: string;
@@ -15,6 +22,9 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
+  deposit30: PaymentStatus;
+  payment15_1: PaymentStatus;
+  payment15_2: PaymentStatus;
 }
 
 interface Order {
@@ -27,18 +37,9 @@ interface Order {
   totalPrice: number;
   seller: string;
   references?: Reference[];
-  deposit30: { isPaid: boolean; paidAt?: string; dueDate?: string; proofUrl?: string };
-  payment15_1: { isPaid: boolean; paidAt?: string; dueDate?: string; proofUrl?: string };
-  payment15_2: { isPaid: boolean; paidAt?: string; dueDate?: string; proofUrl?: string };
   hasOrder?: boolean;
   phone?: string;
   createdAt?: string;
-}
-interface PaymentStatus {
-  isPaid: boolean;
-  paidAt?: string;
-  dueDate?: string;
-  proofUrl?: string;
 }
 
 export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[] }) {
@@ -116,23 +117,40 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
     }
   };
 
-  // Callback pour mettre à jour l'ordre après l'upload d'une preuve
-  const handlePaymentUpdate = (orderId: string, field: string, proofUrl: string) => {
+  // Callback pour mettre à jour l'ordre après l'upload d'une preuve ou toggle de paiement
+  const handleReferencePaymentUpdate = (orderId: string, referenceId: string, field: string, data: { isPaid?: boolean, proofUrl?: string }) => {
+    // Helper to update the specific reference in an order
+    const updateOrderReferences = (order: Order) => {
+        if (!order.references) return order;
+        const newReferences = order.references.map(ref => {
+            if (ref._id === referenceId) {
+                // @ts-expect-error - Dynamic field access
+                const currentField = ref[field] || {};
+                const updatedField = { 
+                    ...currentField, 
+                    ...data,
+                    paidAt: data.isPaid ? new Date().toISOString() : currentField.paidAt,
+                 };
+                 // If toggling to unpaid, remove paidAt
+                 if (data.isPaid === false) updatedField.paidAt = null;
+
+                return { ...ref, [field]: updatedField };
+            }
+            return ref;
+        });
+        return { ...order, references: newReferences };
+    };
+
     const updatedOrders = orders.map(o => {
       if (o._id === orderId) {
-        // @ts-expect-error - Dynamic field access
-        const updatedField = { ...o[field], isPaid: true, paidAt: new Date().toISOString(), proofUrl };
-        return { ...o, [field]: updatedField };
+        return updateOrderReferences(o);
       }
       return o;
     });
     setOrders(updatedOrders);
     
-    // Update selected order if it's the one being modified
     if (selectedOrder && selectedOrder._id === orderId) {
-      // @ts-expect-error - Dynamic field access
-      const updatedField = { ...selectedOrder[field], isPaid: true, paidAt: new Date().toISOString(), proofUrl };
-      setSelectedOrder({ ...selectedOrder, [field]: updatedField });
+      setSelectedOrder(updateOrderReferences(selectedOrder));
     }
   };
 
@@ -178,7 +196,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                   {/* Infos Prix et Références */}
                   <div className="flex justify-between items-center mb-3 text-xs">
                       <div className="flex items-center gap-2">
-                          <span className="text-zinc-600">TTC:</span>
+                          <span className="text-zinc-600">Total:</span>
                           <span className={`font-medium ${order.totalPrice > 0 ? 'text-emerald-500' : 'text-zinc-600'}`}>
                               {order.totalPrice > 0 ? `${order.totalPrice.toLocaleString('fr-FR')} €` : 'Non défini'}
                           </span>
@@ -190,15 +208,6 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                           </div>
                       )}
                   </div>
-                  
-                  {/* Visual Status Indicator - Only show if order exists */}
-                  {order.hasOrder && (
-                      <div className="flex gap-1">
-                          <div className={`h-1 flex-1 rounded-full ${order.deposit30?.isPaid ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
-                          <div className={`h-1 flex-1 rounded-full ${order.payment15_1?.isPaid ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
-                          <div className={`h-1 flex-1 rounded-full ${order.payment15_2?.isPaid ? 'bg-emerald-500' : 'bg-zinc-800'}`} /> 
-                      </div>
-                  )}
               </div>
             ))
           )}
@@ -216,7 +225,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                     exit={{ opacity: 0, x: -20 }}
                     className="p-12 max-w-5xl mx-auto"
                 >
-                    <div className="flex justify-between items-start mb-12">
+                    <div className="flex justify-between items-start mb-8">
                         <div className="space-y-1">
                             {isEditing ? (
                                 <div className="flex gap-2">
@@ -280,34 +289,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 mb-12">
-                        <PaymentControlRow 
-                            label="Acompte 30%" 
-                            amount={(isEditing ? Number(editForm.totalPrice) : selectedOrder.totalPrice) * 0.3} 
-                            status={selectedOrder.deposit30}
-                            orderId={selectedOrder._id}
-                            paymentField="deposit30"
-                            onPaymentUpdate={(field, proofUrl) => handlePaymentUpdate(selectedOrder._id, field, proofUrl)}
-                        />
-                        <PaymentControlRow 
-                            label="Tranche 1 (15%)" 
-                            amount={(isEditing ? Number(editForm.totalPrice) : selectedOrder.totalPrice) * 0.15} 
-                            status={selectedOrder.payment15_1}
-                            orderId={selectedOrder._id}
-                            paymentField="payment15_1"
-                            onPaymentUpdate={(field, proofUrl) => handlePaymentUpdate(selectedOrder._id, field, proofUrl)}
-                        />
-                         <PaymentControlRow 
-                            label="Tranche 2 (15%)" 
-                            amount={(isEditing ? Number(editForm.totalPrice) : selectedOrder.totalPrice) * 0.15} 
-                            status={selectedOrder.payment15_2}
-                            orderId={selectedOrder._id}
-                            paymentField="payment15_2"
-                            onPaymentUpdate={(field, proofUrl) => handlePaymentUpdate(selectedOrder._id, field, proofUrl)}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-2 gap-8 mb-12">
                         <Card className="p-6 bg-zinc-900/30 border-white/5">
                             <h3 className="text-lg font-medium text-white mb-4">Infos Client</h3>
                             <div className="space-y-4">
@@ -356,7 +338,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <User className="w-5 h-5 text-zinc-500" />
-                                <h3 className="text-xl font-medium text-white">Personnes de référence</h3>
+                                <h3 className="text-xl font-medium text-white">Personnes de référence & Paiements</h3>
                                 <span className="px-2 py-1 bg-zinc-800 rounded-full text-xs text-zinc-400">
                                     {selectedOrder.references?.length || 0}
                                 </span>
@@ -377,40 +359,103 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                                 <p className="text-zinc-600 text-sm">Aucune référence ajoutée par le client</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
-                                {selectedOrder.references.map((ref, index) => (
+                            <div className="space-y-6">
+                                {selectedOrder.references.map((ref, index) => {
+                                    const payments = [ref.deposit30, ref.payment15_1, ref.payment15_2];
+                                    const completedPayments = payments.filter(p => p?.isPaid).length;
+                                    const isFullyPaid = completedPayments === 3;
+
+                                    return (
                                     <motion.div
                                         key={ref._id}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="flex items-start justify-between p-4 bg-zinc-900/40 border border-zinc-800/50 rounded-xl hover:border-zinc-700/50 transition-all"
+                                        className={`bg-zinc-900/40 border rounded-xl p-6 transition-colors ${
+                                            isFullyPaid ? 'border-zinc-800/20 bg-zinc-900/20' : 'border-zinc-800/50'
+                                        }`}
                                     >
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-medium text-sm">
-                                                {ref.firstName[0]}{ref.lastName[0]}
+                                        <div className="flex items-start justify-between mb-6 border-b border-white/5 pb-4">
+                                            <div className={`flex items-start gap-4 ${isFullyPaid ? 'opacity-50' : ''}`}>
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center text-white font-medium text-lg relative">
+                                                    {ref.firstName[0]}{ref.lastName[0]}
+                                                    {isFullyPaid && (
+                                                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border border-black">
+                                                            <Check className="w-3 h-3 text-black" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 className={`text-xl font-medium ${isFullyPaid ? 'text-zinc-500 line-through decoration-zinc-700' : 'text-white'}`}>
+                                                        {ref.firstName} {ref.lastName}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Euro className={`w-4 h-4 ${isFullyPaid ? 'text-zinc-600' : 'text-emerald-500'}`} />
+                                                        <span className={`font-medium ${isFullyPaid ? 'text-zinc-600 line-through decoration-zinc-700' : 'text-emerald-400'}`}>
+                                                            {ref.price.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                                                        </span>
+                                                    </div>
+                                                    {ref.info && (
+                                                        <p className="text-zinc-500 text-sm mt-1">{ref.info}</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-white font-medium">{ref.firstName} {ref.lastName}</h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Euro className="w-3 h-3 text-emerald-500" />
-                                                    <span className="text-emerald-400">
-                                                        {ref.price.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                                            
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className="text-xs text-zinc-600">
+                                                    Ajouté le {ref.createdAt && format(new Date(ref.createdAt), 'dd/MM/yyyy')}
+                                                </div>
+                                                {/* Progress Bar */}
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <div className="w-24 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full transition-all duration-500 ${isFullyPaid ? 'bg-zinc-600' : 'bg-emerald-500'}`}
+                                                            style={{ width: `${(completedPayments / 3) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className={`text-xs font-medium ${isFullyPaid ? 'text-zinc-600' : 'text-emerald-500'}`}>
+                                                        {completedPayments}/3
                                                     </span>
                                                 </div>
-                                                {ref.info && (
-                                                    <div className="flex items-start gap-2 mt-2">
-                                                        <FileText className="w-3 h-3 text-zinc-500 mt-0.5 shrink-0" />
-                                                        <p className="text-zinc-500 text-sm max-w-md">{ref.info}</p>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
-                                        <div className="text-xs text-zinc-600">
-                                            {ref.createdAt && format(new Date(ref.createdAt), 'dd/MM/yyyy')}
+
+                                        {/* Payment Controls for this reference - Only show if not fully paid (or maybe always allow editing but initially collapsed?) - User said "crossed out" imply finished. Let's keep them accessible but maybe less prominent if done. I'll keep them visible for now so Admin can uncheck if needed. */}
+                                        <div className={`grid grid-cols-1 gap-4 ${isFullyPaid ? 'opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0' : ''}`}>
+                                            <PaymentControlRow 
+                                                label="Acompte 30%" 
+                                                amount={ref.price * 0.3} 
+                                                status={ref.deposit30}
+                                                orderId={selectedOrder._id}
+                                                referenceId={ref._id}
+                                                paymentField="deposit30"
+                                                onPaymentUpdate={(field, proofUrl) => handleReferencePaymentUpdate(selectedOrder._id, ref._id, field, { isPaid: true, proofUrl })}
+                                            />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <PaymentControlRow 
+                                                    label="Tranche 1 (15%)" 
+                                                    amount={ref.price * 0.15} 
+                                                    status={ref.payment15_1}
+                                                    orderId={selectedOrder._id}
+                                                    referenceId={ref._id}
+                                                    paymentField="payment15_1"
+                                                    onPaymentUpdate={(field, proofUrl) => handleReferencePaymentUpdate(selectedOrder._id, ref._id, field, { isPaid: true, proofUrl })}
+                                                />
+                                                <PaymentControlRow 
+                                                    label="Tranche 2 (15%)" 
+                                                    amount={ref.price * 0.15} 
+                                                    status={ref.payment15_2}
+                                                    orderId={selectedOrder._id}
+                                                    referenceId={ref._id}
+                                                    paymentField="payment15_2"
+                                                    onPaymentUpdate={(field, proofUrl) => handleReferencePaymentUpdate(selectedOrder._id, ref._id, field, { isPaid: true, proofUrl })}
+                                                />
+                                            </div>
                                         </div>
+
                                     </motion.div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -435,6 +480,7 @@ function PaymentControlRow({
     amount, 
     status, 
     orderId,
+    referenceId,
     paymentField,
     onPaymentUpdate
 }: { 
@@ -442,10 +488,14 @@ function PaymentControlRow({
     amount: number, 
     status: PaymentStatus, 
     orderId: string,
+    referenceId: string,
     paymentField: string,
     onPaymentUpdate: (field: string, proofUrl: string) => void
 }) {
-    const isPaid = status?.isPaid;
+    // Default to unpaid if status is undefined (e.g. migration)
+    const currentStatus = status || { isPaid: false };
+    const isPaid = currentStatus.isPaid;
+    
     const [uploading, setUploading] = useState(false);
     const [showProof, setShowProof] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -472,6 +522,7 @@ function PaymentControlRow({
             const formData = new FormData();
             formData.append('file', file);
             formData.append('orderId', orderId);
+            formData.append('referenceId', referenceId);
             formData.append('paymentField', paymentField);
 
             const res = await fetch('/api/orders/upload-proof', {
@@ -499,31 +550,30 @@ function PaymentControlRow({
 
     return (
         <>
-            <div className="flex items-center justify-between p-6 rounded-xl bg-zinc-900/20 border border-white/5 hover:border-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-900/40 border border-white/5 hover:border-white/10 transition-colors">
                 <div>
-                    <div className="text-lg font-medium text-white">{label}</div>
-                    <div className="text-zinc-500">{amount.toFixed(2)} €</div>
+                    <div className="text-sm font-medium text-white">{label}</div>
+                    <div className="text-xs text-zinc-500">{amount.toFixed(2)} €</div>
                 </div>
                 <div className="flex items-center gap-4">
                     {/* Proof indicator */}
-                    {status?.proofUrl && (
+                    {currentStatus?.proofUrl && (
                         <button
                             onClick={() => setShowProof(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-colors text-sm"
+                            className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs"
                         >
-                            <ImageIcon className="w-4 h-4" />
+                            <ImageIcon className="w-3 h-3" />
                             Voir preuve
                         </button>
                     )}
                     
                     <div className="text-right">
                         {isPaid ? (
-                            <div className="text-emerald-500 font-medium">Réglé</div>
+                            <div className="text-emerald-500 font-medium text-sm">Réglé</div>
                         ) : (
-                            <div className="text-amber-500 font-medium">En attente</div>
+                            <div className="text-amber-500 font-medium text-sm">En attente</div>
                         )}
-                        {status?.paidAt && <div className="text-xs text-zinc-600">Payé le {format(new Date(status.paidAt), 'dd/MM/yyyy')}</div>}
-                        {!isPaid && status?.dueDate && <div className="text-xs text-zinc-600">Échéance : {format(new Date(status.dueDate), 'dd/MM/yyyy')}</div>}
+                        {currentStatus?.paidAt && <div className="text-[10px] text-zinc-600">Payé le {format(new Date(currentStatus.paidAt), 'dd/MM/yyyy')}</div>}
                     </div>
                     
                     {/* Upload button */}
@@ -539,23 +589,21 @@ function PaymentControlRow({
                             <Button 
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
-                                className="bg-white text-black hover:bg-zinc-200 gap-2"
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs bg-transparent border-zinc-700 text-zinc-300 hover:text-white"
                             >
-                                <Upload className="w-4 h-4" />
-                                {uploading ? "Upload..." : "Valider avec preuve"}
+                                <Upload className="w-3 h-3 mr-2" />
+                                {uploading ? "..." : "Valider"}
                             </Button>
                         </>
-                    )}
-                    
-                    {isPaid && !status?.proofUrl && (
-                        <span className="text-xs text-zinc-500 italic">Sans preuve</span>
                     )}
                 </div>
             </div>
 
             {/* Proof Modal */}
             <AnimatePresence>
-                {showProof && status?.proofUrl && (
+                {showProof && currentStatus?.proofUrl && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -572,17 +620,16 @@ function PaymentControlRow({
                         >
                             <button
                                 onClick={() => setShowProof(false)}
-                                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4" />
                             </button>
-                            <div className="bg-zinc-900 p-4 border-b border-zinc-800">
-                                <h3 className="text-white font-medium">{label} - Preuve de paiement</h3>
-                                <p className="text-sm text-zinc-400">Payé le {status.paidAt && format(new Date(status.paidAt), 'dd/MM/yyyy à HH:mm')}</p>
+                            <div className="bg-zinc-900 p-3 border-b border-zinc-800">
+                                <h3 className="text-white text-sm font-medium">{label} - Preuve de paiement</h3>
                             </div>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
-                                src={status.proofUrl} 
+                                src={currentStatus.proofUrl} 
                                 alt="Preuve de paiement"
                                 className="max-w-full max-h-[70vh] object-contain"
                             />
@@ -593,4 +640,3 @@ function PaymentControlRow({
         </>
     )
 }
-

@@ -15,14 +15,24 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
+  deposit30: PaymentStatus;
+  payment15_1: PaymentStatus;
+  payment15_2: PaymentStatus;
 }
 
 interface PaymentStatus {
   isPaid?: boolean;
-  paidAt?: Date;
-  dueDate?: Date;
+  paidAt?: string;
+  dueDate?: string;
   proofUrl?: string;
 }
+
+const formatPaymentStatus = (status: any): PaymentStatus => ({
+  isPaid: status?.isPaid || false,
+  paidAt: status?.paidAt ? new Date(status.paidAt).toISOString() : undefined,
+  dueDate: status?.dueDate ? new Date(status.dueDate).toISOString() : undefined,
+  proofUrl: status?.proofUrl
+});
 
 async function getClientData(email: string) {
   await dbConnect();
@@ -45,26 +55,22 @@ export default async function DashboardPage() {
   const order = await getClientData(session.user.email!);
 
   // Préparer les données pour le ReferenceManager
-  const references: Reference[] = order?.references?.map((ref: { _id: { toString: () => string }; firstName: string; lastName: string; price: number; info?: string; createdAt?: Date }) => ({
+  const references: Reference[] = order?.references?.map((ref: any) => ({
     _id: ref._id.toString(),
     firstName: ref.firstName,
     lastName: ref.lastName,
     price: ref.price,
     info: ref.info,
-    createdAt: ref.createdAt?.toISOString() || new Date().toISOString()
+    createdAt: ref.createdAt?.toISOString() || new Date().toISOString(),
+    deposit30: formatPaymentStatus(ref.deposit30),
+    payment15_1: formatPaymentStatus(ref.payment15_1),
+    payment15_2: formatPaymentStatus(ref.payment15_2),
   })) || [];
 
   const totalPrice = order?.totalPrice || 0;
   const userName = order?.firstName || session.user.name?.split(' ')[0] || 'Client';
 
-  // Préparer les steps pour le composant PaymentProgress
-  const formatPaymentStatus = (status: PaymentStatus | undefined) => ({
-    isPaid: status?.isPaid || false,
-    paidAt: status?.paidAt?.toISOString(),
-    dueDate: status?.dueDate?.toISOString(),
-    proofUrl: status?.proofUrl
-  });
-
+  // Legacy steps for global compatible view (optional, can be removed if strictly per-reference)
   const steps = order ? [
     { name: "Acompte", value: "30%", status: formatPaymentStatus(order.deposit30) },
     { name: "Paiement Intermédiaire", value: "15%", status: formatPaymentStatus(order.payment15_1) },
@@ -96,12 +102,10 @@ export default async function DashboardPage() {
               initialTotalPrice={totalPrice}
             />
 
-            {/* Progress Section - visible seulement si une commande existe avec des paiements */}
-            {order && steps.length > 0 && (
-              <PaymentProgressClient steps={steps} />
-            )}
-
-
+            {/* Note: The global PaymentProgressClient might be redundant now if we show payment per reference. 
+                But keeping it for now if there are global fees not covered by references, or just legacy. 
+                However, user asked to "voir l'évolution pour les paiements de SES clients de référence".
+            */}
           </div>
       </div>
     </div>
