@@ -34,7 +34,7 @@ export async function POST(req: Request) {
             totalPrice: 15000,
             seller: "Jean",
             itemCount: 2,
-            deposit30: { isPaid: true, paidAt: new Date(), dueDate: new Date() },
+            deposit70: { isPaid: true, paidAt: new Date(), dueDate: new Date() },
             payment15_1: { isPaid: false, dueDate: new Date(Date.now() + 86400000 * 10) },
             payment15_2: { isPaid: false, dueDate: new Date(Date.now() + 86400000 * 30) }
         },
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
             totalPrice: 4500,
             seller: "Paul",
             itemCount: 1,
-            deposit30: { isPaid: true, paidAt: new Date(Date.now() - 86400000 * 5), dueDate: new Date() },
+            deposit70: { isPaid: true, paidAt: new Date(Date.now() - 86400000 * 5), dueDate: new Date() },
             payment15_1: { isPaid: true, paidAt: new Date(), dueDate: new Date() },
             payment15_2: { isPaid: false, dueDate: new Date(Date.now() + 86400000 * 15) }
         },
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
             totalPrice: 22000,
             seller: "Jean",
             itemCount: 5,
-            deposit30: { isPaid: false, dueDate: new Date() },
+            deposit70: { isPaid: false, dueDate: new Date() },
             payment15_1: { isPaid: false },
             payment15_2: { isPaid: false }
         }
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
                 totalPrice: client.totalPrice,
                 seller: client.seller,
                 itemCount: client.itemCount,
-                deposit30: client.deposit30,
+                deposit70: client.deposit70,
                 payment15_1: client.payment15_1,
                 payment15_2: client.payment15_2
             });

@@ -22,11 +22,11 @@ async function getNotifications() {
     });
 
     // 2. Payment Events
-    if (order.deposit30?.paidAt) {
+    if (order.deposit70?.paidAt) {
       notifications.push({
         type: 'payment',
-        date: new Date(order.deposit30.paidAt),
-        text: `Paiement reçu : ${order.firstName} ${order.lastName} (Acompte 30%)`,
+        date: new Date(order.deposit70.paidAt),
+        text: `Paiement reçu : ${order.firstName} ${order.lastName} (Acompte 70%)`,
         color: 'bg-emerald-500'
       });
     }

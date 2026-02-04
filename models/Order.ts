@@ -8,7 +8,7 @@ const ReferenceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 
   // Payment Steps for each reference
-  deposit30: {
+  deposit70: {
     isPaid: { type: Boolean, default: false },
     paidAt: Date,
     dueDate: Date,

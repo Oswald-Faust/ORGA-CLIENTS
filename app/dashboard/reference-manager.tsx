@@ -23,7 +23,7 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
-  deposit30?: PaymentStatus;
+  deposit70?: PaymentStatus;
   payment15_1?: PaymentStatus;
   payment15_2?: PaymentStatus;
 }
@@ -350,14 +350,14 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
                   <div className="mt-6 pt-4 border-t border-white/5">
                       <div className="flex items-center justify-between text-xs text-zinc-500 mb-3">
                           <span className="uppercase tracking-wider">État des paiements</span>
-                          {(ref.deposit30?.isPaid && ref.payment15_1?.isPaid && ref.payment15_2?.isPaid) && (
+                          {(ref.deposit70?.isPaid && ref.payment15_1?.isPaid && ref.payment15_2?.isPaid) && (
                               <span className="text-emerald-500 flex items-center gap-1 font-medium">
                                   <Check className="w-3 h-3" /> Terminé
                               </span>
                           )}
                       </div>
                       <div className="grid grid-cols-3 gap-3">
-                          <PaymentStepBadge step="30%" label="Acompte" status={ref.deposit30} />
+                          <PaymentStepBadge step="70%" label="Acompte" status={ref.deposit70} />
                           <PaymentStepBadge step="15%" label="Tranche 1" status={ref.payment15_1} />
                           <PaymentStepBadge step="15%" label="Solde" status={ref.payment15_2} />
                       </div>

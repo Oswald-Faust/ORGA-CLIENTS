@@ -22,7 +22,7 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
-  deposit30: PaymentStatus;
+  deposit70: PaymentStatus;
   payment15_1: PaymentStatus;
   payment15_2: PaymentStatus;
 }
@@ -361,7 +361,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                         ) : (
                             <div className="space-y-6">
                                 {selectedOrder.references.map((ref, index) => {
-                                    const payments = [ref.deposit30, ref.payment15_1, ref.payment15_2];
+                                    const payments = [ref.deposit70, ref.payment15_1, ref.payment15_2];
                                     const completedPayments = payments.filter(p => p?.isPaid).length;
                                     const isFullyPaid = completedPayments === 3;
 
@@ -423,12 +423,12 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                                         {/* Payment Controls for this reference - Only show if not fully paid (or maybe always allow editing but initially collapsed?) - User said "crossed out" imply finished. Let's keep them accessible but maybe less prominent if done. I'll keep them visible for now so Admin can uncheck if needed. */}
                                         <div className={`grid grid-cols-1 gap-4 ${isFullyPaid ? 'opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0' : ''}`}>
                                             <PaymentControlRow 
-                                                label="Acompte 30%" 
-                                                amount={ref.price * 0.3} 
-                                                status={ref.deposit30}
+                                                label="Acompte 70%" 
+                                                amount={ref.price * 0.7} 
+                                                status={ref.deposit70}
                                                 orderId={selectedOrder._id}
                                                 referenceId={ref._id}
-                                                paymentField="deposit30"
+                                                paymentField="deposit70"
                                                 onPaymentUpdate={(field, proofUrl) => handleReferencePaymentUpdate(selectedOrder._id, ref._id, field, { isPaid: true, proofUrl })}
                                             />
                                             <div className="grid grid-cols-2 gap-4">

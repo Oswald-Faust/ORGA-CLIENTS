@@ -15,7 +15,7 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
-  deposit30: PaymentStatus;
+  deposit70: PaymentStatus;
   payment15_1: PaymentStatus;
   payment15_2: PaymentStatus;
 }
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
     price: ref.price,
     info: ref.info,
     createdAt: ref.createdAt?.toISOString() || new Date().toISOString(),
-    deposit30: formatPaymentStatus(ref.deposit30),
+    deposit70: formatPaymentStatus(ref.deposit70),
     payment15_1: formatPaymentStatus(ref.payment15_1),
     payment15_2: formatPaymentStatus(ref.payment15_2),
   })) || [];
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
 
   // Legacy steps for global compatible view (optional, can be removed if strictly per-reference)
   const steps = order ? [
-    { name: "Acompte", value: "30%", status: formatPaymentStatus(order.deposit30) },
+    { name: "Acompte", value: "70%", status: formatPaymentStatus(order.deposit70) },
     { name: "Paiement Intermédiaire", value: "15%", status: formatPaymentStatus(order.payment15_1) },
     { name: "Solde", value: "15%", status: formatPaymentStatus(order.payment15_2) },
   ] : [];

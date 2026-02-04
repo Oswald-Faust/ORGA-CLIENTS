@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Validate payment field
-    if (!['deposit30', 'payment15_1', 'payment15_2'].includes(paymentField)) {
+    if (!['deposit70', 'payment15_1', 'payment15_2'].includes(paymentField)) {
       return NextResponse.json({ message: "Champ de paiement invalide" }, { status: 400 });
     }
 

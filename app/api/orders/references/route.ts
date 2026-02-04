@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         lastName: session.user.name?.split(' ').slice(1).join(' ') || '',
         totalPrice: 0,
         references: [],
-        deposit30: { isPaid: false },
+        deposit70: { isPaid: false },
         payment15_1: { isPaid: false },
         payment15_2: { isPaid: false },
         isCompleted: false
