@@ -22,6 +22,12 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
+  bankDetails?: {
+    iban?: string;
+    bic?: string;
+    bankName?: string;
+    accountHolder?: string;
+  };
   deposit70: PaymentStatus;
   payment15_1: PaymentStatus;
   payment15_2: PaymentStatus;
@@ -401,6 +407,7 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                                                 </div>
                                             </div>
                                             
+
                                             <div className="flex flex-col items-end gap-2">
                                                 <div className="text-xs text-zinc-600">
                                                     Ajouté le {ref.createdAt && format(new Date(ref.createdAt), 'dd/MM/yyyy')}
@@ -419,6 +426,42 @@ export function AdminDashboardClient({ initialOrders }: { initialOrders: Order[]
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Bank Details Display */}
+                                        {ref.bankDetails && (ref.bankDetails.iban || ref.bankDetails.bic) && (
+                                            <div className="mb-6 p-4 bg-zinc-950/50 rounded-lg border border-white/5 text-sm">
+                                                <p className="text-zinc-500 font-medium mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
+                                                    <span className="w-1 h-1 bg-zinc-500 rounded-full"></span>
+                                                    Coordonnées Bancaires
+                                                </p>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                                                    {ref.bankDetails.accountHolder && (
+                                                        <div className="space-y-0.5">
+                                                            <span className="text-xs text-zinc-600 block">Titulaire</span>
+                                                            <span className="text-zinc-300 font-mono select-all bg-zinc-900/50 px-2 py-0.5 rounded">{ref.bankDetails.accountHolder}</span>
+                                                        </div>
+                                                    )}
+                                                    {ref.bankDetails.bankName && (
+                                                        <div className="space-y-0.5">
+                                                            <span className="text-xs text-zinc-600 block">Banque</span>
+                                                            <span className="text-zinc-300 font-mono select-all bg-zinc-900/50 px-2 py-0.5 rounded">{ref.bankDetails.bankName}</span>
+                                                        </div>
+                                                    )}
+                                                    {ref.bankDetails.iban && (
+                                                        <div className="space-y-0.5 md:col-span-2">
+                                                            <span className="text-xs text-zinc-600 block">IBAN</span>
+                                                            <span className="text-zinc-300 font-mono select-all bg-zinc-900/50 px-2 py-0.5 rounded w-full block">{ref.bankDetails.iban}</span>
+                                                        </div>
+                                                    )}
+                                                    {ref.bankDetails.bic && (
+                                                        <div className="space-y-0.5">
+                                                            <span className="text-xs text-zinc-600 block">BIC</span>
+                                                            <span className="text-zinc-300 font-mono select-all bg-zinc-900/50 px-2 py-0.5 rounded">{ref.bankDetails.bic}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Payment Controls for this reference - Only show if not fully paid (or maybe always allow editing but initially collapsed?) - User said "crossed out" imply finished. Let's keep them accessible but maybe less prominent if done. I'll keep them visible for now so Admin can uncheck if needed. */}
                                         <div className={`grid grid-cols-1 gap-4 ${isFullyPaid ? 'opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0' : ''}`}>

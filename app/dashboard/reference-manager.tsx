@@ -23,6 +23,12 @@ interface Reference {
   price: number;
   info?: string;
   createdAt: string;
+  bankDetails?: {
+    iban?: string;
+    bic?: string;
+    bankName?: string;
+    accountHolder?: string;
+  };
   deposit70?: PaymentStatus;
   payment15_1?: PaymentStatus;
   payment15_2?: PaymentStatus;
@@ -44,7 +50,11 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
     firstName: "",
     lastName: "",
     price: "",
-    info: ""
+    info: "",
+    iban: "",
+    bic: "",
+    bankName: "",
+    accountHolder: ""
   });
   const router = useRouter();
 
@@ -60,13 +70,24 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
       const res = await fetch("/api/orders/references", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            price: formData.price,
+            info: formData.info,
+            bankDetails: {
+                iban: formData.iban,
+                bic: formData.bic,
+                bankName: formData.bankName,
+                accountHolder: formData.accountHolder
+            }
+        }),
       });
 
       if (res.ok) {
         const data = await res.json();
         setReferences(data.references);
-        setFormData({ firstName: "", lastName: "", price: "", info: "" });
+        setFormData({ firstName: "", lastName: "", price: "", info: "", iban: "", bic: "", bankName: "", accountHolder: "" });
         setShowAddForm(false);
         router.refresh();
       } else {
@@ -277,6 +298,54 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
                     />
                   </div>
 
+                  <div className="pt-4 border-t border-zinc-800">
+                      <h4 className="text-sm font-medium text-white mb-3">Coordonnées Bancaires (Optionnel)</h4>
+                      <div className="space-y-3">
+                          <div className="space-y-2">
+                              <label className="text-xs text-zinc-500 uppercase">Titulaire du compte</label>
+                              <Input
+                                name="accountHolder"
+                                value={formData.accountHolder}
+                                onChange={handleChange}
+                                placeholder="Nom du titulaire"
+                                className="bg-black/40 border-zinc-700"
+                              />
+                          </div>
+                          <div className="space-y-2">
+                              <label className="text-xs text-zinc-500 uppercase">Nom de la banque</label>
+                              <Input
+                                name="bankName"
+                                value={formData.bankName}
+                                onChange={handleChange}
+                                placeholder="Ex: BNP Paribas"
+                                className="bg-black/40 border-zinc-700"
+                              />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                  <label className="text-xs text-zinc-500 uppercase">IBAN</label>
+                                  <Input
+                                    name="iban"
+                                    value={formData.iban}
+                                    onChange={handleChange}
+                                    placeholder="FR76 ..."
+                                    className="bg-black/40 border-zinc-700"
+                                  />
+                              </div>
+                              <div className="space-y-2">
+                                  <label className="text-xs text-zinc-500 uppercase">BIC/SWIFT</label>
+                                  <Input
+                                    name="bic"
+                                    value={formData.bic}
+                                    onChange={handleChange}
+                                    placeholder="BNPARPP..."
+                                    className="bg-black/40 border-zinc-700"
+                                  />
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
                   <div className="flex gap-3 pt-4">
                     <Button
                       type="button"
@@ -333,6 +402,39 @@ export function ReferenceManager({ initialReferences, initialTotalPrice }: Refer
                         </p>
                         {ref.info && (
                             <p className="text-zinc-500 text-sm mt-2 max-w-md">{ref.info}</p>
+                        )}
+                        
+                        {/* Bank Details Display */}
+                        {ref.bankDetails && (ref.bankDetails.iban || ref.bankDetails.bic) && (
+                            <div className="mt-4 p-3 bg-zinc-800/30 rounded-lg border border-zinc-800 text-sm">
+                                <p className="text-zinc-400 font-medium mb-2 text-xs uppercase tracking-wider">Coordonnées Bancaires</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                                    {ref.bankDetails.accountHolder && (
+                                        <div className="flex gap-2">
+                                            <span className="text-zinc-600">Titulaire:</span>
+                                            <span className="text-zinc-300">{ref.bankDetails.accountHolder}</span>
+                                        </div>
+                                    )}
+                                    {ref.bankDetails.bankName && (
+                                        <div className="flex gap-2">
+                                            <span className="text-zinc-600">Banque:</span>
+                                            <span className="text-zinc-300">{ref.bankDetails.bankName}</span>
+                                        </div>
+                                    )}
+                                    {ref.bankDetails.iban && (
+                                        <div className="flex gap-2 md:col-span-2">
+                                            <span className="text-zinc-600">IBAN:</span>
+                                            <span className="text-zinc-300 font-mono">{ref.bankDetails.iban}</span>
+                                        </div>
+                                    )}
+                                    {ref.bankDetails.bic && (
+                                        <div className="flex gap-2">
+                                            <span className="text-zinc-600">BIC:</span>
+                                            <span className="text-zinc-300 font-mono">{ref.bankDetails.bic}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                         </div>
                     </div>

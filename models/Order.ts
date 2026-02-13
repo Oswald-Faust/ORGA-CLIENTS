@@ -7,6 +7,14 @@ const ReferenceSchema = new mongoose.Schema({
   info: { type: String }, // Informations utiles
   createdAt: { type: Date, default: Date.now },
 
+  // Coordonnées bancaires
+  bankDetails: {
+    iban: { type: String },
+    bic: { type: String },
+    bankName: { type: String },
+    accountHolder: { type: String }
+  },
+
   // Payment Steps for each reference
   deposit70: {
     isPaid: { type: Boolean, default: false },
