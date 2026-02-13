@@ -3,9 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { put } from '@vercel/blob';
 
 export async function POST(req: Request) {
   try {
@@ -37,27 +35,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Commande non trouvée" }, { status: 404 });
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'proofs');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     // Generate unique filename
     const timestamp = Date.now();
     const extension = file.name.split('.').pop() || 'png';
-    const filename = `${orderId}_${referenceId || 'main'}_${paymentField}_${timestamp}.${extension}`;
-    const filepath = join(uploadDir, filename);
+    const filename = `proofs/${orderId}_${referenceId || 'main'}_${paymentField}_${timestamp}.${extension}`;
 
-    // Write file
-    await writeFile(filepath, buffer);
+    // Upload to Vercel Blob
+    const blob = await put(filename, file, {
+      access: 'public',
+    });
 
     // Update order with proof URL
-    const proofUrl = `/uploads/proofs/${filename}`;
+    const proofUrl = blob.url;
     
     // Dynamic update based on payment field
     const updateQuery: Record<string, unknown> = {};
