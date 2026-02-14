@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { firstName, lastName, price, info, bankDetails } = body;
+    const { firstName, lastName, price, info } = body;
 
     if (!firstName || !lastName || price === undefined) {
       return NextResponse.json({ message: "Nom, prénom et prix sont requis" }, { status: 400 });
@@ -44,8 +44,7 @@ export async function POST(req: Request) {
       firstName,
       lastName,
       price: Number(price),
-      info: info || '',
-      bankDetails: bankDetails || {}
+      info: info || ''
     });
 
     await order.save();

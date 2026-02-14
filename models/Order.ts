@@ -7,14 +7,6 @@ const ReferenceSchema = new mongoose.Schema({
   info: { type: String }, // Informations utiles
   createdAt: { type: Date, default: Date.now },
 
-  // Coordonnées bancaires
-  bankDetails: {
-    iban: { type: String },
-    bic: { type: String },
-    bankName: { type: String },
-    accountHolder: { type: String }
-  },
-
   // Payment Steps for each reference
   deposit70: {
     isPaid: { type: Boolean, default: false },
@@ -44,6 +36,14 @@ const OrderSchema = new mongoose.Schema({
   totalPrice: { type: Number, default: 0 }, // Prix Total TTC défini par le client
   itemCount: { type: Number, default: 1 },
   seller: { type: String }, // For performance tracking
+  
+  // Coordonnées bancaires du client
+  bankDetails: {
+    iban: { type: String },
+    bic: { type: String },
+    bankName: { type: String },
+    accountHolder: { type: String }
+  },
   
   // Liste des personnes de référence
   references: [ReferenceSchema],

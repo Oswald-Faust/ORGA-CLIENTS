@@ -7,6 +7,7 @@ import { UserNav } from "@/components/user-nav";
 import { ClientSidebar } from "./client-sidebar";
 import { ReferenceManager } from "./reference-manager";
 import { PaymentProgressClient } from "./payment-progress";
+import { BankDetailsForm } from "./bank-details-form"; // 1. Import
 
 interface Reference {
   _id: string;
@@ -70,6 +71,15 @@ export default async function DashboardPage() {
   const totalPrice = order?.totalPrice || 0;
   const userName = order?.firstName || session.user.name?.split(' ')[0] || 'Client';
 
+  // Bank details
+  // Bank details - ensure it's a plain object
+  const bankDetails = {
+    iban: order?.bankDetails?.iban || "",
+    bic: order?.bankDetails?.bic || "",
+    bankName: order?.bankDetails?.bankName || "",
+    accountHolder: order?.bankDetails?.accountHolder || ""
+  };
+
   // Legacy steps for global compatible view (optional, can be removed if strictly per-reference)
   const steps = order ? [
     { name: "Acompte", value: "70%", status: formatPaymentStatus(order.deposit70) },
@@ -101,6 +111,9 @@ export default async function DashboardPage() {
               initialReferences={references}
               initialTotalPrice={totalPrice}
             />
+
+            {/* Formulaire Coordonnées Bancaires */}
+            <BankDetailsForm initialDetails={bankDetails} />
 
             {/* Note: The global PaymentProgressClient might be redundant now if we show payment per reference. 
                 But keeping it for now if there are global fees not covered by references, or just legacy. 
